@@ -329,12 +329,12 @@ These visualizations can be found in the `visualizations/` directory after runni
 
   <div style="text-align: center;">
     <p><strong>🖼️ Collage Output</strong></p>
-    <img src="https://github.com/ANeuronI/Sign-language/blob/main/visualizations/_-Db5LNVqTM--17_collage%20copy.jpg?raw=true" width="245"/>
+    <img src="https://github.com/ANeuronI/Sign-language/blob/main/visualizations/_-Db5LNVqTM--17_collage%20copy.jpg?raw=true" width="300"/>
   </div>
 
   <div style="text-align: center;">
     <p><strong>🎞️ Inference Demo (GIF Preview)</strong></p>
-    <img src="https://github.com/ANeuronI/Sign-language/blob/main/visualizations/inference_demo.gif?raw=true" width="225"/>
+    <img src="https://github.com/ANeuronI/Sign-language/blob/main/visualizations/inference_demo.gif?raw=true" width="300"/>
   </div>
 
 </div>
