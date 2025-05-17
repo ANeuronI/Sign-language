@@ -325,14 +325,19 @@ When running inference with the `--visualization` flag, two files are generated:
 These visualizations can be found in the `visualizations/` directory after running inference.
 
 
-#### 🖼️ Collage Output
+<div style="display: flex; gap: 20px; justify-content: center; align-items: flex-start; flex-wrap: wrap;">
 
-![Collage](https://github.com/ANeuronI/Sign-language/blob/main/visualizations/_-Db5LNVqTM--17_collage%20copy.jpg?raw=true)
+  <div style="text-align: center;">
+    <p><strong>🖼️ Collage Output</strong></p>
+    <img src="https://github.com/ANeuronI/Sign-language/blob/main/visualizations/_-Db5LNVqTM--17_collage%20copy.jpg?raw=true" width="245"/>
+  </div>
 
-#### 🎞️ Inference Demo (GIF Preview)
+  <div style="text-align: center;">
+    <p><strong>🎞️ Inference Demo (GIF Preview)</strong></p>
+    <img src="https://github.com/ANeuronI/Sign-language/blob/main/visualizations/inference_demo.gif?raw=true" width="225"/>
+  </div>
 
-![Demo](https://github.com/ANeuronI/Sign-language/blob/main/visualizations/inference_demo.gif?raw=true)
-
+</div>
 
 ## Translation Process
 
