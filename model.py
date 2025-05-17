@@ -20,21 +20,29 @@ def build_landmark_model(vocab_size, landmark_shape):
     x = Reshape((num_frames, num_landmarks * num_coords))(encoder_inputs)
     
     # LSTM layers for sequence processing
-    x = Bidirectional(LSTM(LSTM_UNITS, return_sequences=True))(x)
-    x = Bidirectional(LSTM(LSTM_UNITS))(x)
+    # Using return_state=True to get the states for decoder initialization
+    encoder_lstm1 = Bidirectional(LSTM(LSTM_UNITS, return_sequences=True))(x)
+    encoder_lstm2 = Bidirectional(LSTM(LSTM_UNITS, return_state=True))(encoder_lstm1)
+    
+    # encoder_lstm2 will be a list [output, forward_h, forward_c, backward_h, backward_c]
+    encoder_outputs = encoder_lstm2[0]
+    
+    # Combine the forward and backward states
+    state_h = Concatenate()([encoder_lstm2[1], encoder_lstm2[3]])  # Concatenate forward and backward h
+    state_c = Concatenate()([encoder_lstm2[2], encoder_lstm2[4]])  # Concatenate forward and backward c
     
     # Dropout for regularization
-    encoder_outputs = Dropout(0.5)(x)
+    encoder_outputs = Dropout(0.5)(encoder_outputs)
     
     # Decoder
     decoder_inputs = Input(shape=(MAX_SEQUENCE_LENGTH,))
-    # Add masking to handle padded sequences - note masking is AFTER embedding now
+    # First embedding, then masking for proper sequence handling
     decoder_embedding = Embedding(vocab_size, EMBEDDING_DIM)(decoder_inputs)
-    mask = Masking(mask_value=0)(decoder_embedding)
+    decoder_masked = Masking(mask_value=0)(decoder_embedding)
     
-    # LSTM layers for sequence generation
-    decoder_lstm = LSTM(LSTM_UNITS * 2, return_sequences=True)
-    decoder_outputs = decoder_lstm(mask, initial_state=[encoder_outputs, encoder_outputs])
+    # LSTM layers for sequence generation with return_sequences=True and return_state=True
+    decoder_lstm = LSTM(LSTM_UNITS * 2, return_sequences=True, return_state=True)
+    decoder_outputs, _, _ = decoder_lstm(decoder_masked, initial_state=[state_h, state_c])
     decoder_outputs = Dropout(0.5)(decoder_outputs)
     
     # Output layer
@@ -50,7 +58,7 @@ def build_landmark_model(vocab_size, landmark_shape):
     )
     
     # Create inference models for beam search
-    encoder_model = Model(encoder_inputs, encoder_outputs)
+    encoder_model = Model(encoder_inputs, [state_h, state_c])
     
     decoder_state_input_h = Input(shape=(LSTM_UNITS * 2,))
     decoder_state_input_c = Input(shape=(LSTM_UNITS * 2,))
@@ -58,11 +66,11 @@ def build_landmark_model(vocab_size, landmark_shape):
     
     decoder_inputs_single = Input(shape=(1,))
     decoder_embedding_single = Embedding(vocab_size, EMBEDDING_DIM)(decoder_inputs_single)
-    decoder_mask_single = Masking(mask_value=0)(decoder_embedding_single)
+    decoder_masked_single = Masking(mask_value=0)(decoder_embedding_single)
     
-    decoder_outputs_single, state_h, state_c = decoder_lstm(
-        decoder_mask_single, initial_state=decoder_states_inputs)
-    decoder_states = [state_h, state_c]
+    decoder_outputs_single, state_h_single, state_c_single = decoder_lstm(
+        decoder_masked_single, initial_state=decoder_states_inputs)
+    decoder_states = [state_h_single, state_c_single]
     decoder_outputs_single = decoder_dense(decoder_outputs_single)
     
     decoder_model = Model(
@@ -277,79 +285,6 @@ def build_transformer_model(vocab_size, landmark_shape):
     
     return model
 
-def beam_search_decode(encoder_model, decoder_model, landmark_sequence, beam_width=3, max_length=MAX_SEQUENCE_LENGTH):
-    """Implement beam search decoding for sequence models"""
-    # Encode the input sequence to get the encoder output
-    if len(decoder_model.input) > 3:  # Attention model
-        encoder_output, h, c = encoder_model.predict(landmark_sequence, verbose=0)
-        states = [h, c]
-    else:  # Simple seq2seq model
-        states = encoder_model.predict(landmark_sequence, verbose=0)
-        encoder_output = None
-    
-    # Start with just the start token
-    start_token = 1  # Assuming 1 is your start token, adjust as needed
-    
-    # Initialize beam with start token
-    beams = [(0, [start_token], states)]  # (score, sequence, states)
-    completed_beams = []
-    
-    # Beam search loop
-    for _ in range(max_length - 1):
-        new_beams = []
-        
-        for score, sequence, current_states in beams:
-            if sequence[-1] == 2:  # Assuming 2 is your end token, adjust as needed
-                # Add completed sequence to results
-                completed_beams.append((score, sequence))
-                continue
-                
-            # Prepare the input for decoder step
-            target_seq = np.array([[sequence[-1]]])
-            
-            # Predict next tokens
-            if encoder_output is not None:  # Attention model
-                decoder_output, next_h, next_c, _ = decoder_model.predict(
-                    [target_seq, encoder_output] + current_states, verbose=0)
-                next_states = [next_h, next_c]
-            else:  # Simple seq2seq model
-                decoder_output, next_h, next_c = decoder_model.predict(
-                    [target_seq] + current_states, verbose=0)
-                next_states = [next_h, next_c]
-            
-            # Get top k probabilities and indices
-            probs = decoder_output[0, 0]
-            top_indices = np.argsort(probs)[-beam_width:]
-                
-            # Create new beams
-            for idx in top_indices:
-                prob = np.log(probs[idx] + 1e-10)  # Log probability for numerical stability
-                new_score = score + prob
-                new_sequence = sequence + [idx]
-                new_beams.append((new_score, new_sequence, next_states))
-        
-        # Keep only the top beam_width beams
-        beams = sorted(new_beams, key=lambda x: x[0], reverse=True)[:beam_width]
-        
-        # Early stopping if all beams have completed
-        if len(beams) == 0:
-            break
-    
-    # Add any remaining beams to completed beams
-    for score, sequence, _ in beams:
-        if sequence[-1] != 2:  # If not ended with end token
-            completed_beams.append((score, sequence))
-    
-    # Return the highest scoring completed beam
-    if completed_beams:
-        completed_beams = sorted(completed_beams, key=lambda x: x[0], reverse=True)
-        best_sequence = completed_beams[0][1]
-    else:
-        # If no completed beams, return the highest scoring incomplete beam
-        best_sequence = beams[0][1] if beams else [start_token]
-    
-    return best_sequence
-
 def build_cnn_lstm_model(vocab_size):
     """Build a CNN-LSTM model for direct video to text translation"""
     # Input for raw video frames
@@ -431,14 +366,6 @@ def get_model(model_type, vocab_size, input_shape=None):
         return build_transformer_model(vocab_size, input_shape)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
-
-# Example usage of beam search during inference
-def translate_sequence(encoder_model, decoder_model, input_sequence, beam_width=3):
-    """Translate an input sequence using beam search"""
-    predicted_sequence = beam_search_decode(
-        encoder_model, decoder_model, input_sequence, beam_width=beam_width)
-    # Convert sequence to text using your tokenizer here
-    return predicted_sequence
 
 if __name__ == "__main__":
     # Test model creation
