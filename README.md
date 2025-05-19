@@ -1,6 +1,6 @@
 # Indian Sign Language Translator
 
-This repository contains a modular implementation of an Indian Sign Language (ISL) translator that converts sign language videos into natural language text. The system extracts pose and hand landmarks from videos, then uses deep learning models to translate the sequence of landmarks into coherent sentences.
+This repository contains an implementation of an Indian Sign Language (ISL) translator that converts sign language videos into natural language text. The system extracts pose and hand landmarks from videos, then uses deep learning models to translate the sequence of landmarks into coherent sentences.
 
 ## Project Structure
 
