@@ -54,6 +54,7 @@ This repository contains an implementation of an Indian Sign Language (ISL) tran
 - Pandas
 - Matplotlib
 - scikit-learn
+- uv
 
 ## Usage
 
@@ -167,7 +168,7 @@ Options:
 
 ## Model Architectures
 
-Our models significantly outperform existing approaches for Indian Sign Language translation, achieving a 15% improvement in BLEU score and 23% improvement in translation accuracy compared to previous state-of-the-art implementations. The attention-based mechanisms and hybrid approaches prove particularly effective at capturing the spatial-temporal relationships in sign language gestures.
+Our models significantly outperform existing approaches for Indian Sign Language translation, achieving a 15% improvement in BLEU score and 23% improvement in translation accuracy compared to previous state-of-the-art implementations. The attention-based mechanisms and transformer approaches prove particularly effective at capturing the spatial-temporal relationships in sign language gestures.
 
 ### Landmark Model
 The Landmark model is a sequence-to-sequence architecture that processes human pose landmarks:
@@ -252,6 +253,7 @@ The Hybrid model innovatively combines LSTM and Transformer approaches:
 
 The hybrid approach leverages both the sequential modeling power of LSTMs and the parallelizable, long-range dependency modeling of transformers, resulting in more accurate translations.
 
+hybrid model need some improvement, it's not performing that well.
 
 ## Decoding model
 The project implements multiple decoding strategies for generating translations:
